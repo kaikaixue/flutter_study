@@ -34,11 +34,24 @@ dependencies:
   flutter_swiper_view: ^1.1.8
   # 屏幕适配
   flutter_screenutil: ^5.9.0-beta
+  # 吐司
   oktoast: ^3.3.1
   # 网络请求
   dio: ^5.3.4
   # 状态管理
   provider: ^6.1.2
+  # 下拉刷新上拉加载
+  pull_to_refresh: ^2.0.0
+  # 本地化存储
+  shared_preferences: ^2.0.15
+  # 显示HTML文本
+  flutter_html: ^3.0.0-alpha.6
+  # webview：基于原生webview封装的
+  flutter_inappwebview: ^5.8.0
+  # 获取版本信息设备信息等
+  package_info_plus: ^4.0.2
+  device_info_plus: ^8.1.0
+
 
 
   # The following adds the Cupertino Icons font to your application.

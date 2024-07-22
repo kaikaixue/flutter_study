@@ -11,10 +11,17 @@ class ResponseInterceptor extends Interceptor {
         if (rsp.errorCode == 0) {
           if (rsp.data == null) {
             handler.next(Response(requestOptions: response.requestOptions, data: true));
-          } else if (rsp.errorCode == -1001) {
-            handler.reject(DioException(requestOptions: response.requestOptions, message: '未登录'));
-            showToast('请先登录');
-          } else {
+          }  else {
+            handler.next(Response(requestOptions: response.requestOptions, data: rsp.data));
+          }
+        } else if (rsp.errorCode == -1001) {
+          handler.reject(DioException(requestOptions: response.requestOptions, message: '未登录'));
+          showToast('请先登录');
+        } else if (rsp.errorCode == -1) {
+          showToast(rsp.errorMsg ?? "");
+          if (rsp.data == null) {
+            handler.next(Response(requestOptions: response.requestOptions, data: false));
+          }  else {
             handler.next(Response(requestOptions: response.requestOptions, data: rsp.data));
           }
         }

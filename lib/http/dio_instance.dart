@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_study/http/cookie_interceptor.dart';
 import 'package:flutter_study/http/http_method.dart';
 import 'package:flutter_study/http/print_log_interceptor.dart';
 import 'package:flutter_study/http/rsp_interceptor.dart';
@@ -33,6 +34,7 @@ class DioInstance {
       responseType: responseType,
       contentType: contentType,
     );
+    _dio.interceptors.add(CookieInterceptor());
     _dio.interceptors.add(PrintLogInterceptor());
     _dio.interceptors.add(ResponseInterceptor());
   }

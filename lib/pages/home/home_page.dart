@@ -5,16 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_study/datas/home_banner_data.dart';
+import 'package:flutter_study/common_ui/loading.dart';
+import 'package:flutter_study/common_ui/web/webview_page.dart';
+import 'package:flutter_study/common_ui/web/webview_widget.dart';
 import 'package:flutter_study/pages/home/home_vm.dart';
-import 'package:flutter_study/pages/web_view_page.dart';
 import 'package:flutter_study/routes/RouteUtils.dart';
 import 'package:flutter_study/routes/routes.dart';
 import 'package:flutter_swiper_view/flutter_swiper_view.dart';
 import 'package:provider/provider.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import '../../datas/home_list_data.dart';
-
+import '../../common_ui/smart_refresh/smart_refresh_widget.dart';
+import '../../repository/datas/home_list_data.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,13 +29,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   HomeViewModel viewModel = HomeViewModel();
+  RefreshController refreshController = RefreshController();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    Loading.showLoading();
     viewModel.getBanner();
-    viewModel.getHomeList();
+    refreshOrLoad(false);
+  }
+
+  void refreshOrLoad(bool loadMore) {
+    viewModel.initListData(loadMore, callback: (loadMore) {
+      if (loadMore) {
+        refreshController.loadComplete();
+      } else {
+        refreshController.refreshCompleted();
+      }
+      Loading.dismissAll();
+    });
   }
 
   @override
@@ -44,12 +58,23 @@ class _HomePageState extends State<HomePage> {
       },
       child: Scaffold(
         body: SafeArea(
-            child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _banner(),
-              _homeListView(),
-            ],
+            child: SmartRefreshWidget(
+          controller: refreshController,
+          onLoading: () {
+            refreshOrLoad(true);
+          },
+          onRefresh: () {
+            viewModel.getBanner().then((value) {
+              refreshOrLoad(false);
+            });
+          },
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _banner(),
+                _homeListView(),
+              ],
+            ),
           ),
         )),
       ),
@@ -68,13 +93,26 @@ class _HomePageState extends State<HomePage> {
             pagination: const SwiperPagination(),
             control: const SwiperControl(),
             itemBuilder: (context, index) {
-              return Container(
-                height: 150.h,
-                width: double.infinity,
-                color: Colors.lightBlue,
-                child: Image.network(
-                  vm.bannerList?[index]?.imagePath ?? "",
-                  fit: BoxFit.fill,
+              return GestureDetector(
+                onTap: () {
+                  RouteUtils.push(
+                      context,
+                      WebViewPage(
+                        loadResource: vm.bannerList?[index]?.url ?? "",
+                        webViewType: WebViewType.URL,
+                        showTitle: true,
+                        title: vm.bannerList?[index]?.title ?? "",
+                      ));
+                },
+                child:
+                Container(
+                  height: 150.h,
+                  width: double.infinity,
+                  color: Colors.lightBlue,
+                  child: Image.network(
+                    vm.bannerList?[index]?.imagePath ?? "",
+                    fit: BoxFit.fill,
+                  ),
                 ),
               );
             }),
@@ -88,14 +126,14 @@ class _HomePageState extends State<HomePage> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) {
-          return _listItemView(vm.listData?[index]);
+          return _listItemView(vm.listData?[index], index);
         },
         itemCount: vm.listData?.length ?? 0,
       );
     });
   }
 
-  Widget _listItemView(HomeListItemData? item) {
+  Widget _listItemView(HomeListItemData? item, int index) {
     var name;
     if (item?.author?.isNotEmpty == true) {
       name = item?.author;
@@ -104,8 +142,14 @@ class _HomePageState extends State<HomePage> {
     }
     return GestureDetector(
         onTap: () {
-          RouteUtils.pushForNamed(context, RoutePath.webViewPage,
-              arguments: {'name': '使用路由传值'});
+          RouteUtils.push(
+              context,
+              WebViewPage(
+                loadResource: item?.link ?? "",
+                webViewType: WebViewType.URL,
+                showTitle: true,
+                title: item?.title,
+              ));
         },
         child: Container(
           height: 120.h,
@@ -148,16 +192,22 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(color: Colors.black, fontSize: 12.sp)),
                   ),
                   SizedBox(width: 5.w),
-                  const Text(
-                    '置顶',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.blue),
-                  ),
+                  (item?.type?.toInt() == 1)
+                      ? const Text(
+                          '置顶',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, color: Colors.blue),
+                        )
+                      : SizedBox(),
                 ],
               ),
-              SizedBox(height: 5.h,),
+              SizedBox(
+                height: 5.h,
+              ),
               Text(
                 item?.title ?? '',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
                 style: TextStyle(color: Colors.black, fontSize: 14.sp),
               ),
               Expanded(child: SizedBox()),
@@ -168,10 +218,21 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.green, fontSize: 12.sp),
                   ),
                   Expanded(child: SizedBox()),
-                  Image.asset(
-                    "assets/images/img_collect_grey.png",
-                    width: 30.r,
-                    height: 30.r,
+                  GestureDetector(
+                    onTap: () {
+                      if (item?.collect == true) {
+                        viewModel.collectOrNo(false, "${item?.id}", index);
+                      } else {
+                        viewModel.collectOrNo(true, "${item?.id}", index);
+                      }
+                    },
+                    child: Image.asset(
+                      item?.collect == true
+                          ? "assets/images/img_collect.png"
+                          : "assets/images/img_collect_grey.png",
+                      width: 30.r,
+                      height: 30.r,
+                    ),
                   )
                 ],
               ),

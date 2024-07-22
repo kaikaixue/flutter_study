@@ -46,6 +46,18 @@ class HomeListData {
 
 }
 
+class HomeTopListData {
+  List<HomeListItemData>? topList = [];
+
+  HomeTopListData.fromJson(dynamic json) {
+    if (json is List) {
+      for (var el in json) {
+        topList?.add(HomeListItemData.fromJson(el));
+      }
+    }
+  }
+}
+
 class HomeListItemData {
   HomeListItemData({
       this.adminAdd, 
@@ -205,9 +217,6 @@ class HomeListItemData {
   }
 
 }
-
-/// name : "公众号"
-/// url : "/wxarticle/list/408/1"
 
 class Tags {
   Tags({
